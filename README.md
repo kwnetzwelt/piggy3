@@ -5,12 +5,14 @@ Three tabs: **Virtuelle Konten** (read-only balances), **Monatliche Kosten**
 (editable monthly costs, which double as the autofill list for bookings), and
 **Buchungen** (fast keyboard entry, editable in place).
 
-## Run with Docker
+## How to install
+
+Pre-built Docker images are available on Docker Hub: [piggy3.frontend](https://hub.docker.com/r/kaiwegner/piggy3.frontend) and [piggy3.backend](https://hub.docker.com/r/kaiwegner/piggy3.backend). You can use the provided `docker-compose.yml` to pull and start the app.
 
 ```sh
 cp .env.example .env
 # edit .env: set AUTH_USERNAME, AUTH_PASSWORD and a unique AUTH_JWT_SECRET
-docker compose up -d --build
+docker compose up -d
 ```
 
 Open <http://localhost:5000> and sign in.
@@ -42,6 +44,21 @@ matches a monthly cost. Totals are net.
 The Buchungen tab also has a type dropdown and "alle Buchen": it creates one
 booking dated today for every active monthly cost of the selected type, using
 the value and its sign exactly as stored.
+
+## Export and Import Data
+
+All data is stored in the MongoDB container. You can export the database to a compressed archive and import it to another instance using the following commands.
+
+**Export (Backup):**
+```sh
+docker compose exec -T mongo mongodump --archive --gzip > piggy3_export.archive.gz
+```
+
+**Import (Restore):**
+```sh
+docker compose exec -T mongo mongorestore --archive --gzip < piggy3_export.archive.gz
+```
+*Note: If the target database already contains data, `mongorestore` merges it by default. To overwrite existing collections, add the `--drop` flag to the restore command.*
 
 ## Development
 

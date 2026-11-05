@@ -11,6 +11,7 @@ services:
       retries: 10
 
   api:
+    image: ${DOCKER_REGISTRY:-kaiwegner/}piggy3.backend:${RELEASE_TAG:-latest}
     build:
       context: .
       dockerfile: src/Piggy3.Api/Dockerfile
@@ -27,6 +28,7 @@ services:
         condition: service_healthy
 
   frontend:
+    image: ${DOCKER_REGISTRY:-kaiwegner/}piggy3.frontend:${RELEASE_TAG:-latest}
     build:
       context: .
       dockerfile: src/Piggy3.Frontend/Dockerfile
