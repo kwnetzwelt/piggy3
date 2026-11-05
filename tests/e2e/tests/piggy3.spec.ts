@@ -5,6 +5,15 @@ const PASS = process.env.AUTH_PASSWORD ?? 'admin';
 const SUFFIX = Date.now().toString(36);
 let counter = 0;
 
+test.beforeAll(() => {
+  if (process.env.PIGGY3_E2E !== '1') {
+    throw new Error(
+      'Refusing to run: these tests delete all bookings and hide all accounts. ' +
+        'Set PIGGY3_E2E=1 and point BASE_URL at a dedicated test stack (see README).',
+    );
+  }
+});
+
 function accountName(prefix: string): string {
   counter += 1;
   return `${prefix}-${SUFFIX}-${counter}`;
@@ -66,6 +75,10 @@ async function addBooking(page: Page, value: string, account: string): Promise<v
   await page.selectOption('#AccountId', { label: account });
   await page.getByRole('button', { name: 'Buchung hinzufügen' }).click();
   await page.waitForLoadState('networkidle');
+}
+
+async function accountId(page: Page, account: string): Promise<string> {
+  return (await page.locator('#AccountId option', { hasText: account }).getAttribute('value'))!;
 }
 
 test('requires login and shows the three tabs', async ({ page }) => {
@@ -195,6 +208,55 @@ test('tab 3 edits and deletes a booking in place', async ({ page }) => {
 
   await expect(page.getByText('Noch keine Buchungen.')).toBeVisible();
   await expect(page.locator('#transaction-total')).toContainText('0,00 €');
+});
+
+test('two equal monthly values do not guess', async ({ page }) => {
+  await start(page);
+  const first = accountName('Doppelt-A');
+  const second = accountName('Doppelt-B');
+
+  await addCost(page, first, 'Ausgabe', '53,80');
+  await addCost(page, second, 'Ausgabe', '53,80');
+
+  await page.goto('/?tab=buchungen');
+  const secondId = await accountId(page, second);
+  const firstId = await accountId(page, first);
+  await page.selectOption('#AccountId', secondId);
+
+  await page.fill('#Value', '-53,80');
+
+  await expect(page.locator('#AccountId')).toHaveValue(secondId);
+  await expect(page.locator('#AccountId')).not.toHaveValue(firstId);
+});
+
+test('soft-deleted account is hidden but its bookings stay in the total', async ({ page }) => {
+  await start(page);
+  const deleted = accountName('Alt');
+  const other = accountName('Neu');
+
+  await addCost(page, deleted, 'Ausgabe', '10,00');
+  await addBooking(page, '-10,00', deleted);
+  await addCost(page, other, 'Ausgabe', '20,00');
+
+  await page.goto('/?tab=kosten');
+  await page.locator('tr', {
+    has: page.locator(`input[name="name"][value="${deleted}"]`),
+  }).getByRole('button', { name: 'Löschen' }).click();
+  await page.waitForLoadState('networkidle');
+
+  await page.goto('/?tab=konten');
+  await expect(page.locator(`[data-account-row="${deleted}"]`)).toHaveCount(0);
+  await expect(page.locator(`[data-account-row="${other}"]`)).toBeVisible();
+
+  await page.goto('/?tab=buchungen');
+  await expect(page.locator('#AccountId option', { hasText: deleted })).toHaveCount(0);
+  await expect(page.locator('#transaction-total')).toContainText('-10,00 €');
+  await expect(page.locator('table tbody tr').first()).toContainText(`${deleted} (gelöscht)`);
+
+  const otherId = await accountId(page, other);
+  await page.selectOption('#AccountId', otherId);
+  await page.fill('#Value', '10,00');
+  await expect(page.locator('#AccountId')).toHaveValue(otherId);
 });
 
 test('empty state renders without errors', async ({ page }) => {

@@ -18,8 +18,8 @@ services:
     environment:
       - ACCOUNT_TYPES=${ACCOUNT_TYPES:-Ausgabe,Sparen,Haus}
       - AUTH_USERNAME=${AUTH_USERNAME:-admin}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-admin}
-      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-me-32-chars-minimum-secret}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:?set AUTH_PASSWORD in .env}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in .env (at least 32 characters)}
       - MONGO_CONNECTION_STRING=mongodb://mongo:27017
       - MONGO_DATABASE_NAME=${MONGO_DATABASE_NAME:-piggy3}
     depends_on:

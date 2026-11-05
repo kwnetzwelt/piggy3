@@ -23,10 +23,12 @@ All settings come from `.env`:
 | --- | --- |
 | `ACCOUNT_TYPES` | Comma-separated account types, e.g. `Ausgabe,Sparen,Haus` |
 | `AUTH_USERNAME` | Login user name |
-| `AUTH_PASSWORD` | Login password |
-| `AUTH_JWT_SECRET` | HMAC secret for API tokens, at least 32 characters |
+| `AUTH_PASSWORD` | Login password (required, no default) |
+| `AUTH_JWT_SECRET` | HMAC secret for API tokens, at least 32 characters (required, no default) |
 | `MONGO_DATABASE_NAME` | Database name (default `piggy3`) |
 | `FRONTEND_PORT` | Host port for the frontend (default `5000`) |
+| `MONGO_CONNECTION_STRING` | Internal MongoDB URL, fixed to `mongodb://mongo:27017` in `docker-compose.yml` |
+| `API_BASE_URL` | Internal API URL used by the frontend, fixed to `http://api:8080` in `docker-compose.yml` |
 
 Adding a monthly cost creates the virtual account. Deleting a monthly cost
 soft-deletes the account: it disappears from the balances and the booking
@@ -58,13 +60,22 @@ dotnet run --project src/Piggy3.Frontend --urls http://localhost:5090
 dotnet test tests/Piggy3.Api.Tests
 ```
 
-End-to-end tests use Playwright against a running stack:
+End-to-end tests use Playwright. They delete all bookings and hide all accounts
+before each test, so **only run them against a dedicated stack** — never against
+your real instance. The suite refuses to start unless `PIGGY3_E2E=1` is set.
 
 ```sh
+# dedicated e2e stack, separate Docker project and volume
+FRONTEND_PORT=5001 docker compose -p piggy3-e2e up -d --build
+
 cd tests/e2e
 npm install
 npx playwright install chromium
-BASE_URL=http://localhost:5000 AUTH_USERNAME=admin AUTH_PASSWORD=admin npx playwright test
+PIGGY3_E2E=1 BASE_URL=http://localhost:5001 \
+  AUTH_USERNAME=admin AUTH_PASSWORD=your-password npx playwright test
+
+# afterwards
+docker compose -p piggy3-e2e down -v
 ```
 
 ## Authentication

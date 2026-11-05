@@ -134,6 +134,19 @@ public class MonthlyCostsControllerTests
     }
 
     [Fact]
+    public async Task Get_SortsUnknownTypesLast()
+    {
+        AddActive("a1", "Haus", "Haus", 1m);
+        AddActive("a2", "Internet", "Ausgabe", 2m);
+
+        var result = await Controller().Get(includeDeleted: false);
+        var rows = (IReadOnlyList<MonthlyCostRow>)((OkObjectResult)result.Result!).Value!;
+
+        Assert.Equal(["Internet", "Haus"], rows.Select(r => r.Name));
+        Assert.Equal(3m, rows.Sum(r => r.Value));
+    }
+
+    [Fact]
     public async Task Delete_SoftDeletesAccount_WithoutRemovingCost()
     {
         AddActive("a1", "Internet", "Ausgabe", 1m);
