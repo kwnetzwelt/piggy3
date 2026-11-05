@@ -1,0 +1,42 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Piggy3.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      - ACCOUNT_TYPES=${ACCOUNT_TYPES:-Ausgabe,Sparen,Haus}
+      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-admin}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-change-me-32-chars-minimum-secret}
+      - MONGO_CONNECTION_STRING=mongodb://mongo:27017
+      - MONGO_DATABASE_NAME=${MONGO_DATABASE_NAME:-piggy3}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: src/Piggy3.Frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      - API_BASE_URL=http://api:8080
+    ports:
+      - "${FRONTEND_PORT:-5000}:8080"
+    depends_on:
+      - api
+
+volumes:
+  mongo-data:
