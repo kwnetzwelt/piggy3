@@ -151,8 +151,10 @@ test('tab 1 groups accounts and shows net sums', async ({ page }) => {
 test('tab 3 guesses by absolute value, cycles focus and adds with Enter', async ({ page }) => {
   await start(page);
   const account = accountName('Internet');
+  const decoy = accountName('Decoy');
 
   await addCost(page, account, 'Ausgabe', '53,80');
+  await addCost(page, decoy, 'Ausgabe', '11,11');
 
   await page.goto('/?tab=buchungen');
   await expect(page.locator('#Value')).toBeFocused();
@@ -160,6 +162,12 @@ test('tab 3 guesses by absolute value, cycles focus and adds with Enter', async 
   const accountId = await page
     .locator('#AccountId option', { hasText: account })
     .getAttribute('value');
+  const decoyId = await page
+    .locator('#AccountId option', { hasText: decoy })
+    .getAttribute('value');
+
+  await page.selectOption('#AccountId', decoyId!);
+  await expect(page.locator('#AccountId')).toHaveValue(decoyId!);
 
   await page.fill('#Value', '53,80');
   await expect(page.locator('#AccountId')).toHaveValue(accountId!);
