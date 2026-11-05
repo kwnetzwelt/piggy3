@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -142,6 +143,29 @@ public class IndexModel : PageModel
         catch (ApiException)
         {
             SetError("Die Buchung konnte nicht gespeichert werden.");
+        }
+
+        return RedirectToPage("/Index", new { tab = "buchungen" });
+    }
+
+    public async Task<IActionResult> OnPostBookMonthlyCostsAsync(string type)
+    {
+        try
+        {
+            var costs = (await _api.GetMonthlyCostsAsync(false))
+                .Where(c => !c.IsDeleted && c.Type == type && c.Value != 0);
+            var date = DateTime.Today.ToString("yyyy-MM-dd");
+
+            foreach (var cost in costs)
+            {
+                var amount = (-Math.Abs(cost.Value)).ToString("0.00", CultureInfo.InvariantCulture);
+                await _api.CreateTransactionAsync(
+                    new TransactionRequest(date, amount, cost.AccountId));
+            }
+        }
+        catch (ApiException)
+        {
+            SetError("Die monatlichen Kosten konnten nicht gebucht werden.");
         }
 
         return RedirectToPage("/Index", new { tab = "buchungen" });

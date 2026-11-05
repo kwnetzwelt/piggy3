@@ -197,6 +197,9 @@ Entry row `[Date] [Value] [Account]` as a Bootstrap form:
   date/value/account inputs with save/cancel, and a delete action. Enter saves,
   Escape cancels. All actions post to frontend handlers, so the table and total
   are current after reload.
+- A second row offers a type dropdown and an "alle Buchen" button. It creates
+  one negative booking dated today for every active monthly cost of the selected
+  type (zero values are skipped), so recurring costs can be entered in one step.
 
 Money parsing: trim, remove spaces and `€`, convert a single comma to a dot,
 then parse with invariant culture; reject empty or multiple separators.

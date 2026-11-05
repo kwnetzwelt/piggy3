@@ -259,6 +259,33 @@ test('soft-deleted account is hidden but its bookings stay in the total', async 
   await expect(page.locator('#AccountId')).toHaveValue(otherId);
 });
 
+test('books all monthly costs of the selected type', async ({ page }) => {
+  await start(page);
+  const first = accountName('Fixkosten');
+  const second = accountName('Strom');
+  const other = accountName('Sparen');
+
+  await addCost(page, first, 'Ausgabe', '10,00');
+  await addCost(page, second, 'Ausgabe', '20,00');
+  await addCost(page, other, 'Sparen', '30,00');
+
+  await page.goto('/?tab=buchungen');
+  await page.selectOption('#BulkType', 'Ausgabe');
+  await page.click('#BookMonthlyCosts');
+  await page.waitForLoadState('networkidle');
+
+  await expect(page.locator('table tbody tr')).toHaveCount(2);
+  await expect(page.locator('#transaction-total')).toContainText('-30,00 €');
+  const bookedAccounts = await page
+    .locator('table tbody tr select[name="accountId"] option:checked')
+    .allTextContents();
+  expect(bookedAccounts.sort()).toEqual([first, second].sort());
+  const bookedValues = await page
+    .locator('table tbody tr input[name="value"]')
+    .evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value));
+  expect(bookedValues.sort()).toEqual(['-20,00', '-10,00'].sort());
+});
+
 test('empty state renders without errors', async ({ page }) => {
   await start(page);
 
