@@ -117,6 +117,50 @@ public class IndexModel : PageModel
         return RedirectToPage("/Index", new { tab = "kosten", showDeleted = true });
     }
 
+    public async Task<IActionResult> OnPostAddTransactionAsync(
+        string date, string value, string accountId)
+    {
+        try
+        {
+            await _api.CreateTransactionAsync(new TransactionRequest(date, value, accountId));
+        }
+        catch (ApiException)
+        {
+            SetError("Die Buchung konnte nicht gespeichert werden.");
+        }
+
+        return RedirectToPage("/Index", new { tab = "buchungen" });
+    }
+
+    public async Task<IActionResult> OnPostUpdateTransactionAsync(
+        string id, string date, string value, string accountId)
+    {
+        try
+        {
+            await _api.UpdateTransactionAsync(id, new TransactionRequest(date, value, accountId));
+        }
+        catch (ApiException)
+        {
+            SetError("Die Buchung konnte nicht gespeichert werden.");
+        }
+
+        return RedirectToPage("/Index", new { tab = "buchungen" });
+    }
+
+    public async Task<IActionResult> OnPostDeleteTransactionAsync(string id)
+    {
+        try
+        {
+            await _api.DeleteTransactionAsync(id);
+        }
+        catch (ApiException)
+        {
+            SetError("Die Buchung konnte nicht gelöscht werden.");
+        }
+
+        return RedirectToPage("/Index", new { tab = "buchungen" });
+    }
+
     public async Task<IActionResult> OnPostLogoutAsync()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -169,6 +213,9 @@ public class IndexModel : PageModel
         DefaultDate = DateTime.Today.ToString("yyyy-MM-dd");
         AccountOptions = (await _api.GetAccountsAsync())
             .Select(a => new AccountOption(a.Id, a.Name))
+            .ToList();
+        ActiveMonthlyCosts = (await _api.GetMonthlyCostsAsync(false))
+            .Where(c => !c.IsDeleted)
             .ToList();
     }
 

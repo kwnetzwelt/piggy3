@@ -185,5 +185,91 @@ else if (Model.ActiveTab == "kosten")
 }
 else
 {
-    <p class="text-muted">Die Buchungen werden als Nächstes aufgebaut.</p>
+    <form method="post" asp-page-handler="AddTransaction" class="row g-2 align-items-end mb-4">
+        <div class="col-md-3">
+            <label for="Date" class="form-label">Datum</label>
+            <input id="Date" name="date" type="date" value="@Model.DefaultDate"
+                   class="form-control" tabindex="3" required />
+        </div>
+        <div class="col-md-3">
+            <label for="Value" class="form-label">Wert</label>
+            <input id="Value" name="value" class="form-control" inputmode="decimal"
+                   placeholder="-53,80" autofocus tabindex="1" required />
+        </div>
+        <div class="col-md-4">
+            <label for="AccountId" class="form-label">Konto</label>
+            <select id="AccountId" name="accountId" class="form-select" tabindex="2" required>
+                @foreach (var option in Model.AccountOptions)
+                {
+                    <option value="@option.Id">@option.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Buchung hinzufügen</button>
+        </div>
+    </form>
+
+    <div class="h5 mb-3">
+        Gesamt: <span class="money @(Model.TransactionTotal < 0 ? "text-negative" : "")">@Money.Format(Model.TransactionTotal)</span>
+    </div>
+
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Konto</th>
+                <th class="text-end">Wert</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.Transactions)
+            {
+                var formId = $"tx-{row.Id}";
+                var accountExists = Model.AccountOptions.Any(o => o.Id == row.AccountId);
+                <tr>
+                    <td>
+                        <input form="@formId" name="date" type="date" value="@row.Date"
+                               class="form-control form-control-sm" />
+                    </td>
+                    <td>
+                        <select form="@formId" name="accountId" class="form-select form-select-sm">
+                            @if (!accountExists)
+                            {
+                                <option value="@row.AccountId" selected>@row.AccountName (gelöscht)</option>
+                            }
+                            @foreach (var option in Model.AccountOptions)
+                            {
+                                <option value="@option.Id" selected="@(option.Id == row.AccountId)">@option.Name</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <input form="@formId" name="value" value="@row.Amount.ToString("0.00", de)"
+                               class="form-control form-control-sm text-end" />
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <form id="@formId" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@row.Id" />
+                            <button type="submit" asp-page-handler="UpdateTransaction"
+                                    class="btn btn-sm btn-primary">Speichern</button>
+                            <button type="submit" asp-page-handler="DeleteTransaction" formnovalidate
+                                    class="btn btn-sm btn-outline-danger">Löschen</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.Transactions.Count == 0)
+    {
+        <p class="text-muted">Noch keine Buchungen.</p>
+    }
+
+    <script id="monthly-costs" type="application/json">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.ActiveMonthlyCosts.Select(c => new { c.AccountId, c.Value })))
+    </script>
 }
