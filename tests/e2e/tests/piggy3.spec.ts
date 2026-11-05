@@ -265,7 +265,7 @@ test('books all monthly costs of the selected type', async ({ page }) => {
   const second = accountName('Strom');
   const other = accountName('Sparen');
 
-  await addCost(page, first, 'Ausgabe', '10,00');
+  await addCost(page, first, 'Ausgabe', '-10,00');
   await addCost(page, second, 'Ausgabe', '20,00');
   await addCost(page, other, 'Sparen', '30,00');
 
@@ -275,7 +275,7 @@ test('books all monthly costs of the selected type', async ({ page }) => {
   await page.waitForLoadState('networkidle');
 
   await expect(page.locator('table tbody tr')).toHaveCount(2);
-  await expect(page.locator('#transaction-total')).toContainText('-30,00 €');
+  await expect(page.locator('#transaction-total')).toContainText('10,00 €');
   const bookedAccounts = await page
     .locator('table tbody tr select[name="accountId"] option:checked')
     .allTextContents();
@@ -283,7 +283,7 @@ test('books all monthly costs of the selected type', async ({ page }) => {
   const bookedValues = await page
     .locator('table tbody tr input[name="value"]')
     .evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value));
-  expect(bookedValues.sort()).toEqual(['-20,00', '-10,00'].sort());
+  expect(bookedValues.sort()).toEqual(['-10,00', '20,00'].sort());
 });
 
 test('empty state renders without errors', async ({ page }) => {

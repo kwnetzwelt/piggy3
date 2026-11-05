@@ -158,7 +158,7 @@ public class IndexModel : PageModel
 
             foreach (var cost in costs)
             {
-                var amount = (-Math.Abs(cost.Value)).ToString("0.00", CultureInfo.InvariantCulture);
+                var amount = cost.Value.ToString("0.00", CultureInfo.InvariantCulture);
                 await _api.CreateTransactionAsync(
                     new TransactionRequest(date, amount, cost.AccountId));
             }
