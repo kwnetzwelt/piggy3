@@ -39,6 +39,9 @@ Bookings are stored exactly as entered: expenses negative, income positive.
 The account is guessed when the entered value (ignoring the sign) exactly
 matches a monthly cost. Totals are net.
 
+The Buchungen tab also has a type dropdown and "alle Buchen": it creates one
+negative booking dated today for every active monthly cost of the selected type.
+
 ## Development
 
 Requires .NET 10 and a local MongoDB on `localhost:27017`.

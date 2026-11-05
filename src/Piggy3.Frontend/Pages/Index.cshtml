@@ -210,6 +210,23 @@ else
         </div>
     </form>
 
+    <form method="post" asp-page-handler="BookMonthlyCosts" class="row g-2 align-items-end mb-4">
+        <div class="col-md-4">
+            <label for="BulkType" class="form-label">Monatliche Kosten buchen</label>
+            <select id="BulkType" name="type" class="form-select">
+                @foreach (var type in Model.AccountTypes)
+                {
+                    <option value="@type">@type</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" id="BookMonthlyCosts" class="btn btn-outline-primary w-100">
+                alle Buchen
+            </button>
+        </div>
+    </form>
+
     <div class="h5 mb-3">
         Gesamt: <span id="transaction-total" class="money @(Model.TransactionTotal < 0 ? "text-negative" : "")">@Money.Format(Model.TransactionTotal)</span>
     </div>
