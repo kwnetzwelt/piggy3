@@ -287,6 +287,6 @@ else
 
     <script id="monthly-costs" type="application/json">
         @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.ActiveMonthlyCosts.Select(c => new { c.AccountId, c.Value })))
+            Model.ActiveMonthlyCosts.Select(c => new { accountId = c.AccountId, value = c.Value })))
     </script>
 }
