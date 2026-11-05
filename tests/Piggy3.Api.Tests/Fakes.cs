@@ -65,8 +65,7 @@ public sealed class FakeMonthlyCostRepository : IMonthlyCostRepository
     }
 }
 
-public sealed class FakeTransactionRepository : ITransactionRepository
-{
+public sealed class FakeTransactionRepository : ITransactionRepository{
     public List<Transaction> Transactions { get; } = [];
 
     public Task<List<Transaction>> GetAllAsync() => Task.FromResult(Transactions.ToList());
@@ -96,6 +95,30 @@ public sealed class FakeTransactionRepository : ITransactionRepository
     public Task DeleteAsync(string id)
     {
         Transactions.RemoveAll(t => t.Id == id);
+        return Task.CompletedTask;
+    }
+}
+
+public sealed class FakeTotpSecretRepository : ITotpSecretRepository
+{
+    public List<TotpSecret> Secrets { get; } = [];
+
+    public Task<TotpSecret?> GetAsync(string userId) =>
+        Task.FromResult(Secrets.FirstOrDefault(s => s.UserId == userId));
+
+    public Task UpsertAsync(TotpSecret secret)
+    {
+        var index = Secrets.FindIndex(s => s.UserId == secret.UserId);
+        if (index >= 0)
+            Secrets[index] = secret;
+        else
+            Secrets.Add(secret);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(string userId)
+    {
+        Secrets.RemoveAll(s => s.UserId == userId);
         return Task.CompletedTask;
     }
 }

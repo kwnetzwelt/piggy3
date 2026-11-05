@@ -17,6 +17,9 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <div class="d-flex align-items-center gap-3">
+                    <a class="nav-link text-light" asp-page="/TwoFactor/Setup">
+                        <i class="bi bi-shield-lock"></i> 2FA
+                    </a>
                     <span class="navbar-text text-light">
                         <i class="bi bi-person-circle"></i> @User.Identity.Name
                     </span>

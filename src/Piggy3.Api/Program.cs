@@ -20,10 +20,12 @@ builder.Services.AddSingleton<IMongoContext>(sp =>
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IMonthlyCostRepository, MonthlyCostRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<ITotpSecretRepository, TotpSecretRepository>();
 
 builder.Services.AddSingleton<AccountTypes>();
 builder.Services.AddSingleton<PasswordVerifier>();
 builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddSingleton<TotpService>();
 
 var jwtSecret = builder.Configuration["AUTH_JWT_SECRET"] ?? string.Empty;
 if (jwtSecret.Length < 32)

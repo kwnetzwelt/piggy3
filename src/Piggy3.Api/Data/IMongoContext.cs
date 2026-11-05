@@ -8,4 +8,5 @@ public interface IMongoContext
     IMongoCollection<Account> Accounts { get; }
     IMongoCollection<MonthlyCost> MonthlyCosts { get; }
     IMongoCollection<Transaction> Transactions { get; }
+    IMongoCollection<TotpSecret> TotpSecrets { get; }
 }

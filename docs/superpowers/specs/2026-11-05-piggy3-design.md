@@ -17,6 +17,7 @@ enter bookings quickly while checking the total against the real bank account.
 - Bookings entered quickly from the keyboard, with exact-value account guessing.
 - Soft-deleted accounts can be restored.
 - Username/password login now, prepared for a later switch to Nextcloud OIDC.
+- Optional TOTP two-factor authentication (authenticator app) with a setup page.
 - API and frontend as separate projects; Docker Compose with MongoDB.
 - Unit tests for the API, end-to-end tests for the frontend.
 
@@ -107,6 +108,12 @@ Collection `transactions`:
 - `accountId` string (must reference an existing account, including deleted ones)
 - `createdAt`, `updatedAt` DateTime UTC
 
+Collection `totpSecrets` (one per user, only when 2FA is enabled):
+- `_id` ObjectId
+- `userId` string (configured user name)
+- `secret` string (Base32 TOTP secret)
+- `createdAt` DateTime UTC
+
 No seeded data. The first login shows empty tables.
 
 ## API
@@ -118,9 +125,23 @@ transaction returns `404`.
 ### Auth
 
 - `POST /api/auth/login` — body `{ "username": "...", "password": "..." }`.
-  Returns `{ "token": "..." }` on success, `401` otherwise. JWT subject is the
-  configured user, expiry 7 days.
+  On success returns `{ token, challengeToken, twoFactorRequired, username }`.
+  Without 2FA `token` is set; with 2FA `twoFactorRequired` is true,
+  `challengeToken` is a 5-minute token with a separate audience, and `token`
+  is null. `401` for wrong credentials.
+- `POST /api/auth/2fa/verify` — body `{ challengeToken, code }`, anonymous.
+  Validates the challenge and TOTP code, returns a normal login response with
+  an access token, or `401`.
+- `GET /api/auth/2fa` — `{ enabled }` for the current user.
+- `POST /api/auth/2fa/setup` — returns `{ secret, otpauthUri }` for a new
+  secret; nothing is stored yet.
+- `POST /api/auth/2fa/enable` — body `{ secret, code }`; verifies the code,
+  stores the secret, returns `204`. Invalid code returns `400`.
+- `DELETE /api/auth/2fa` — removes the stored secret, returns `204`.
 - `GET /api/account-types` — returns configured type list, in configured order.
+
+Challenge tokens use audience `piggy3-2fa` and are rejected by the normal API
+bearer validation, which requires audience `piggy3`.
 
 ### Accounts (tab 1)
 
@@ -157,6 +178,12 @@ account name) because the total must match the bank account.
 Single Razor page `/` with Bootstrap 5 tabs. The active tab survives reloads
 via `?tab=konten|kosten|buchungen`, so form submissions return to the right tab.
 `/Login` is the only other page; all pages require login.
+
+When 2FA is enabled, `/Login` stores the short-lived challenge and user name in
+HttpOnly cookies and redirects to `/TwoFactor`, where the code is verified.
+`/TwoFactor/Setup` (linked as "2FA" in the navbar) shows a QR code and the
+manual secret, verifies one code, and then shows the enabled state with a
+disable button. The TOTP secret is stored only after a valid code is entered.
 
 ### Tab 1 — Virtuelle Konten
 
@@ -234,11 +261,12 @@ operation; no migration step is needed.
 ## Testing
 
 **API unit tests** (`dotnet test tests/Piggy3.Api.Tests`): money parse/format,
-login (correct/incorrect credentials, missing config), account totals, monthly
-cost create/update/soft-delete/restore rules, transaction CRUD validation,
-type filtering, and HTTP status codes via `WebApplicationFactory` with mocked
-repositories or an in-memory Mongo substitute. Controllers/helpers carry the
-logic; tests target them directly. No test requires a running MongoDB.
+login (correct/incorrect credentials, missing config), TOTP setup/verify/enable/
+disable, challenge-token isolation from API bearer tokens, account totals,
+monthly cost create/update/soft-delete/restore rules, transaction CRUD
+validation, type filtering, and HTTP status codes via `WebApplicationFactory`
+with mocked repositories or an in-memory Mongo substitute. Controllers/helpers
+carry the logic; tests target them directly. No test requires a running MongoDB.
 
 **Frontend e2e tests** (`tests/e2e`, Playwright): start the Compose stack, log
 in, then:

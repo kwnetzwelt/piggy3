@@ -1,6 +1,3 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -11,6 +8,9 @@ namespace Piggy3.Frontend.Pages;
 [AllowAnonymous]
 public class LoginModel : PageModel
 {
+    private const string ChallengeCookie = "piggy3_2fa";
+    private const string ChallengeUserCookie = "piggy3_2fa_user";
+
     private readonly ApiClient _api;
 
     public LoginModel(ApiClient api)
@@ -31,23 +31,29 @@ public class LoginModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var token = await _api.LoginAsync(Username, Password);
-        if (token is null)
+        var login = await _api.LoginAsync(Username, Password);
+        if (login is null)
         {
             Error = "Benutzername oder Passwort falsch.";
             return Page();
         }
 
-        var identity = new ClaimsIdentity(
-        [
-            new Claim(ClaimTypes.Name, Username),
-            new Claim("api_token", token)
-        ], CookieAuthenticationDefaults.AuthenticationScheme);
+        if (login.TwoFactorRequired)
+        {
+            var options = new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(5)
+            };
 
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(identity));
+            Response.Cookies.Append(ChallengeCookie, login.ChallengeToken!, options);
+            Response.Cookies.Append(ChallengeUserCookie, login.Username, options);
+            return RedirectToPage("/TwoFactor");
+        }
 
+        await AuthCookie.SignInAsync(HttpContext, login.Username, login.Token!);
         return RedirectToPage("/Index");
     }
 }
