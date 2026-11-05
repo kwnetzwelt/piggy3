@@ -41,7 +41,7 @@
     {
         @foreach (var group in Model.AccountGroups)
         {
-            <h2 class="h5 mt-4">@group.Type</h2>
+            <h2 class="h5 mt-4" data-account-group="@group.Type">@group.Type</h2>
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
@@ -53,11 +53,11 @@
                 <tbody>
                     @foreach (var row in group.Rows)
                     {
-                        <tr>
+                        <tr data-account-row="@row.Name">
                             <td>@row.Name</td>
                             <td>@row.Type</td>
                             <td class="text-end">
-                                <span class="money @(row.Sum < 0 ? "text-negative" : "")">@Money.Format(row.Sum)</span>
+                                <span class="money @(row.Sum < 0 ? "text-negative" : "")" data-account-sum>@Money.Format(row.Sum)</span>
                             </td>
                         </tr>
                     }
@@ -74,12 +74,12 @@ else if (Model.ActiveTab == "kosten")
                 <tbody>
                     @foreach (var total in Model.MonthlyTypeTotals)
                     {
-                        <tr>
+                        <tr data-type-total="@total.Type">
                             <td>@total.Type</td>
                             <td class="text-end money">@Money.Format(total.Total)</td>
                         </tr>
                     }
-                    <tr class="border-top fw-bold">
+                    <tr class="border-top fw-bold" id="monthly-grand-total">
                         <td>Total</td>
                         <td class="text-end money">@Money.Format(Model.MonthlyGrandTotal)</td>
                     </tr>
@@ -211,7 +211,7 @@ else
     </form>
 
     <div class="h5 mb-3">
-        Gesamt: <span class="money @(Model.TransactionTotal < 0 ? "text-negative" : "")">@Money.Format(Model.TransactionTotal)</span>
+        Gesamt: <span id="transaction-total" class="money @(Model.TransactionTotal < 0 ? "text-negative" : "")">@Money.Format(Model.TransactionTotal)</span>
     </div>
 
     <table class="table align-middle">
