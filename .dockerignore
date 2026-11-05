@@ -1,0 +1,6 @@
+**/bin
+**/obj
+.git
+.env
+node_modules
+tests
