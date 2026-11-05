@@ -1,8 +1,189 @@
 @page
+@using System.Globalization
 @model IndexModel
 @{
     ViewData["Title"] = "Übersicht";
+    var de = CultureInfo.GetCultureInfo("de-DE");
 }
 
 <h1 class="h3 mb-3">Piggy</h1>
-<p class="text-muted">Die Übersicht wird als Nächstes aufgebaut.</p>
+
+@if (Model.ErrorMessage is { } error)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @error
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+    </div>
+}
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "konten" ? "active" : "")"
+           asp-page="/Index" asp-route-tab="konten">Virtuelle Konten</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "kosten" ? "active" : "")"
+           asp-page="/Index" asp-route-tab="kosten">Monatliche Kosten</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "buchungen" ? "active" : "")"
+           asp-page="/Index" asp-route-tab="buchungen">Buchungen</a>
+    </li>
+</ul>
+
+@if (Model.ActiveTab == "konten")
+{
+    @if (Model.AccountGroups.Count == 0)
+    {
+        <p class="text-muted">Noch keine Konten.</p>
+    }
+    else
+    {
+        @foreach (var group in Model.AccountGroups)
+        {
+            <h2 class="h5 mt-4">@group.Type</h2>
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Konto</th>
+                        <th>Typ</th>
+                        <th class="text-end">Summe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in group.Rows)
+                    {
+                        <tr>
+                            <td>@row.Name</td>
+                            <td>@row.Type</td>
+                            <td class="text-end">
+                                <span class="money @(row.Sum < 0 ? "text-negative" : "")">@Money.Format(row.Sum)</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+}
+else if (Model.ActiveTab == "kosten")
+{
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    @foreach (var total in Model.MonthlyTypeTotals)
+                    {
+                        <tr>
+                            <td>@total.Type</td>
+                            <td class="text-end money">@Money.Format(total.Total)</td>
+                        </tr>
+                    }
+                    <tr class="border-top fw-bold">
+                        <td>Total</td>
+                        <td class="text-end money">@Money.Format(Model.MonthlyGrandTotal)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <form method="get" asp-page="/Index" class="mb-2">
+        <input type="hidden" name="tab" value="kosten" />
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="showDeleted" value="true"
+                   id="showDeleted" checked="@Model.ShowDeleted" onchange="this.form.submit()" />
+            <label class="form-check-label" for="showDeleted">Gelöschte anzeigen</label>
+        </div>
+    </form>
+
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Konto</th>
+                <th>Wert</th>
+                <th>Typ</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.MonthlyCosts)
+            {
+                var formId = $"cost-{row.AccountId}";
+                <tr class="@(row.IsDeleted ? "table-secondary" : "")">
+                    <td>
+                        <input form="@formId" name="name" value="@row.Name"
+                               class="form-control form-control-sm" disabled="@row.IsDeleted" />
+                        @if (row.IsDeleted)
+                        {
+                            <span class="small text-muted">(gelöscht)</span>
+                        }
+                    </td>
+                    <td>
+                        <input form="@formId" name="value" value="@row.Value.ToString("0.00", de)"
+                               class="form-control form-control-sm text-end" disabled="@row.IsDeleted" />
+                    </td>
+                    <td>
+                        <select form="@formId" name="type" class="form-select form-select-sm"
+                                disabled="@row.IsDeleted">
+                            @foreach (var type in Model.AccountTypes.Concat([row.Type]).Distinct())
+                            {
+                                <option value="@type" selected="@(type == row.Type)">@type</option>
+                            }
+                        </select>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <form id="@formId" method="post" class="d-inline">
+                            <input type="hidden" name="accountId" value="@row.AccountId" />
+                            @if (row.IsDeleted)
+                            {
+                                <button type="submit" asp-page-handler="RestoreMonthlyCost"
+                                        class="btn btn-sm btn-outline-secondary">Wiederherstellen</button>
+                            }
+                            else
+                            {
+                                <button type="submit" asp-page-handler="UpdateMonthlyCost"
+                                        class="btn btn-sm btn-primary">Speichern</button>
+                                <button type="submit" asp-page-handler="DeleteMonthlyCost" formnovalidate
+                                        class="btn btn-sm btn-outline-danger">Löschen</button>
+                            }
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.MonthlyCosts.Count == 0)
+    {
+        <p class="text-muted">Noch keine monatlichen Kosten.</p>
+    }
+
+    <form method="post" asp-page-handler="AddMonthlyCost" id="add-cost-form"
+          class="row g-2 align-items-end mt-3">
+        <div class="col-md-4">
+            <label for="NewName" class="form-label">Konto</label>
+            <input id="NewName" name="name" class="form-control" required />
+        </div>
+        <div class="col-md-2">
+            <label for="NewValue" class="form-label">Wert</label>
+            <input id="NewValue" name="value" class="form-control" placeholder="0,00" required />
+        </div>
+        <div class="col-md-2">
+            <label for="NewType" class="form-label">Typ</label>
+            <select id="NewType" name="type" class="form-select">
+                @foreach (var type in Model.AccountTypes)
+                {
+                    <option value="@type">@type</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" id="AddMonthlyCost" class="btn btn-success w-100">Hinzufügen</button>
+        </div>
+    </form>
+}
+else
+{
+    <p class="text-muted">Die Buchungen werden als Nächstes aufgebaut.</p>
+}
