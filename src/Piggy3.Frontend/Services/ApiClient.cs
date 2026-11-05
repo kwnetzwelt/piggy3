@@ -22,7 +22,7 @@ public class ApiClient
     private string? Token =>
         _httpContext.HttpContext?.User.FindFirst("api_token")?.Value;
 
-    public async Task<string?> LoginAsync(string username, string password)
+    public async Task<LoginResponse?> LoginAsync(string username, string password)
     {
         using var response = await _http.PostAsJsonAsync(
             "api/auth/login", new LoginRequest(username, password), Json);
@@ -33,8 +33,34 @@ public class ApiClient
         if (!response.IsSuccessStatusCode)
             throw new ApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
 
-        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(Json);
-        return login?.Token;
+        return await response.Content.ReadFromJsonAsync<LoginResponse>(Json);
+    }
+
+    public async Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync() =>
+        await GetAsync<TwoFactorStatusResponse>("api/auth/2fa");
+
+    public async Task<TwoFactorSetupResponse> SetupTwoFactorAsync() =>
+        await SendAsync<TwoFactorSetupResponse>(HttpMethod.Post, "api/auth/2fa/setup");
+
+    public async Task EnableTwoFactorAsync(string secret, string code) =>
+        await SendAsync(HttpMethod.Post, "api/auth/2fa/enable",
+            new TwoFactorEnableRequest(secret, code));
+
+    public async Task DisableTwoFactorAsync() =>
+        await SendAsync(HttpMethod.Delete, "api/auth/2fa");
+
+    public async Task<LoginResponse?> VerifyTwoFactorAsync(string challengeToken, string code)
+    {
+        using var response = await _http.PostAsJsonAsync(
+            "api/auth/2fa/verify", new TwoFactorVerifyRequest(challengeToken, code), Json);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            return null;
+
+        if (!response.IsSuccessStatusCode)
+            throw new ApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
+
+        return await response.Content.ReadFromJsonAsync<LoginResponse>(Json);
     }
 
     public async Task<List<AccountRow>> GetAccountsAsync() =>

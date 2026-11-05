@@ -1,0 +1,74 @@
+@page
+@model Piggy3.Frontend.Pages.TwoFactor.SetupModel
+@{
+    ViewData["Title"] = "Zwei-Faktor-Authentifizierung";
+}
+
+<h1 class="h3 mb-3">Zwei-Faktor-Authentifizierung</h1>
+
+@if (Model.Success is not null)
+{
+    <div class="alert alert-success">@Model.Success</div>
+}
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+
+@if (Model.Enabled)
+{
+    <div class="card">
+        <div class="card-body">
+            <h2 class="h5">Aktiv</h2>
+            <p class="text-muted mb-3">
+                Beim Anmelden wird zusätzlich ein Code aus deiner Authenticator-App verlangt.
+            </p>
+            <form method="post" asp-page-handler="Disable"
+                  onsubmit="return confirm('Zwei-Faktor-Authentifizierung deaktivieren?')">
+                <button type="submit" class="btn btn-outline-danger">Deaktivieren</button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h2 class="h5 mb-3">QR-Code scannen</h2>
+                    <div class="mb-3">@Html.Raw(Model.QrCodeSvg)</div>
+                    <p class="text-muted small mb-2">
+                        Mit einer Authenticator-App scannen (Google Authenticator, Aegis, …).
+                    </p>
+                    <details class="text-start">
+                        <summary class="small text-muted">Manuell eingeben</summary>
+                        <code id="TotpSecret" class="d-block mt-2 p-2 bg-light rounded">@Model.Secret</code>
+                    </details>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Setup bestätigen</h2>
+                    <p class="text-muted">
+                        Gib den 6-stelligen Code aus der App ein, um die Einrichtung abzuschließen.
+                    </p>
+                    <form method="post" asp-page-handler="Enable">
+                        <input type="hidden" name="secret" value="@Model.Secret" />
+                        <input type="hidden" name="otpauthUri" value="@Model.OtpauthUri" />
+                        <div class="mb-3">
+                            <label for="Code" class="form-label">Code</label>
+                            <input id="Code" name="code" class="form-control form-control-lg text-center"
+                                   inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                                   autocomplete="one-time-code" placeholder="000000" autofocus required />
+                        </div>
+                        <button type="submit" class="btn btn-primary">Aktivieren</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}

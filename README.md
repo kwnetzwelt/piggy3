@@ -89,3 +89,16 @@ stores it inside its encrypted auth cookie and calls the API server-side.
 Switching to Nextcloud OIDC later replaces the frontend login step and lets the
 API validate OIDC tokens; the data model and pages do not change. OIDC is not
 implemented yet.
+
+## Two-factor authentication
+
+Log in, open **2FA** in the navbar, scan the QR code with an authenticator app,
+and confirm the 6-digit code. Once enabled, every login also asks for a code.
+Disable it on the same page.
+
+The secret is stored in MongoDB. There are no recovery codes: if the
+authenticator is lost, remove the secret from the database and log in again:
+
+```sh
+docker compose exec mongo mongosh piggy3 --eval 'db.totpSecrets.deleteMany({})'
+```

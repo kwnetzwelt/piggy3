@@ -1,0 +1,33 @@
+@page
+@model TwoFactorModel
+@{
+    ViewData["Title"] = "Zwei-Faktor-Code";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h4 text-center mb-3">Zwei-Faktor-Authentifizierung</h1>
+                <p class="text-muted text-center mb-4">
+                    Gib den 6-stelligen Code aus deiner Authenticator-App ein.
+                </p>
+
+                @if (Model.Error is not null)
+                {
+                    <div class="alert alert-danger">@Model.Error</div>
+                }
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="Code" class="form-label">Code</label>
+                        <input id="Code" name="code" class="form-control form-control-lg text-center"
+                               inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                               autocomplete="one-time-code" placeholder="000000" autofocus required />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">Bestätigen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

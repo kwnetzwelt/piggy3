@@ -15,4 +15,5 @@ public class MongoContext : IMongoContext
     public IMongoCollection<Account> Accounts => _database.GetCollection<Account>("accounts");
     public IMongoCollection<MonthlyCost> MonthlyCosts => _database.GetCollection<MonthlyCost>("monthlyCosts");
     public IMongoCollection<Transaction> Transactions => _database.GetCollection<Transaction>("transactions");
+    public IMongoCollection<TotpSecret> TotpSecrets => _database.GetCollection<TotpSecret>("totpSecrets");
 }

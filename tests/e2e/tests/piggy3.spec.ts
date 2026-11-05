@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { test, expect, Page } from '@playwright/test';
 
 const USER = process.env.AUTH_USERNAME ?? 'admin';
@@ -79,6 +80,32 @@ async function addBooking(page: Page, value: string, account: string): Promise<v
 
 async function accountId(page: Page, account: string): Promise<string> {
   return (await page.locator('#AccountId option', { hasText: account }).getAttribute('value'))!;
+}
+
+function base32ToBuffer(input: string): Buffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const clean = input.toUpperCase().replace(/=+$/, '').replace(/\s/g, '');
+  let bits = '';
+  for (const char of clean) {
+    const value = alphabet.indexOf(char);
+    if (value < 0) throw new Error(`invalid base32 character: ${char}`);
+    bits += value.toString(2).padStart(5, '0');
+  }
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(Number.parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+function totp(secret: string): string {
+  const counter = Math.floor(Date.now() / 1000 / 30);
+  const message = Buffer.alloc(8);
+  message.writeBigUInt64BE(BigInt(counter));
+  const hmac = createHmac('sha1', base32ToBuffer(secret)).update(message).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const value = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return value.toString().padStart(6, '0');
 }
 
 test('requires login and shows the three tabs', async ({ page }) => {
@@ -292,6 +319,38 @@ test('books all monthly costs of the selected type', async ({ page }) => {
     .locator('table tbody tr input[name="value"]')
     .evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value));
   expect(bookedValues.sort()).toEqual(['-10,00', '20,00'].sort());
+});
+
+test('sets up and enforces TOTP two-factor login', async ({ page }) => {
+  await start(page);
+
+  await page.getByRole('link', { name: '2FA' }).click();
+  await page.waitForLoadState('networkidle');
+
+  const secret = (await page.locator('#TotpSecret').textContent())!.trim();
+  await page.fill('#Code', totp(secret));
+  await page.getByRole('button', { name: 'Aktivieren' }).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText('Zwei-Faktor-Authentifizierung ist aktiv.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Abmelden' }).click();
+  await expect(page).toHaveURL(/\/Login/);
+
+  await page.fill('#Username', USER);
+  await page.fill('#Password', PASS);
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/TwoFactor$/);
+
+  await page.fill('#Code', totp(secret));
+  await page.getByRole('button', { name: 'Bestätigen' }).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('link', { name: 'Virtuelle Konten' })).toBeVisible();
+
+  await page.goto('/TwoFactor/Setup');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Deaktivieren' }).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText('Zwei-Faktor-Authentifizierung ist deaktiviert.')).toBeVisible();
 });
 
 test('empty state renders without errors', async ({ page }) => {
