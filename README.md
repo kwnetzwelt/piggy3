@@ -7,7 +7,12 @@ Three tabs: **Virtuelle Konten** (read-only balances), **Monatliche Kosten**
 
 ## How to install
 
-Pre-built Docker images are available on Docker Hub: [piggy3.frontend](https://hub.docker.com/r/kaiwegner/piggy3.frontend) and [piggy3.backend](https://hub.docker.com/r/kaiwegner/piggy3.backend). You can use the provided `docker-compose.yml` to pull and start the app.
+Pre-built Docker images are available on Docker Hub. The workflow on GitHub automatically builds and publishes the latest `main` branch as `latest` and tags as specific versions.
+
+- **Frontend:** [`kaiwegner/piggy3.frontend`](https://hub.docker.com/r/kaiwegner/piggy3.frontend)
+- **Backend API:** [`kaiwegner/piggy3.backend`](https://hub.docker.com/r/kaiwegner/piggy3.backend)
+
+You can use the provided `docker-compose.yml` to pull and start the app.
 
 ```sh
 cp .env.example .env
